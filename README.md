@@ -1,3 +1,4 @@
+
 # Programs
 Base code for program assignments in Software Development (C S 371). 
 
@@ -9,3 +10,9 @@ This assignment relies on the Coverage programs.
 
 ## Program 4
 This assignment relies on the Circles programs. 
+
+# GitHub User ID
+kharo019
+
+# Lab1 (L1) HelloWorld
+This assignment relies on the HelloWorld program
