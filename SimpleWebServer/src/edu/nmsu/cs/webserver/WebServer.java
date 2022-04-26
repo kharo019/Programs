@@ -11,7 +11,8 @@ package edu.nmsu.cs.webserver;
  * connection off to the WebWorker object. The WebServer object then just keeps listening for new
  * client connections. See the WebWorker source for more information about it.
  * 
- * @author Jon Cook, Ph.D.
+ * original @author Jon Cook, Ph.D.
+ * edited/modified Kevin Haro 
  * 
  **/
 import java.net.ServerSocket;
@@ -103,10 +104,11 @@ public class WebServer
 			}
 		}
 		WebServer server = new WebServer();
-		if (!server.start(port))
-		{
+		
+		if (!server.start(port)){
 			System.err.println("Execution failed!");
-		}
+		}// end of if
+		
 	} // end main
 
 } // end class
