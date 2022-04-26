@@ -17,7 +17,8 @@ package edu.nmsu.cs.webserver;
  * content for the response content. HTTP requests and responses are just lines of text (in a very
  * particular format).
  * 
- * @author Jon Cook, Ph.D.
+ * original @author Jon Cook, Ph.D.
+ * added/modified Kevin Haro 
  *
  **/
 
@@ -30,29 +31,31 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+import java.lang.Runnable;
+import java.io.*;
+import java.io.File;
+
 public class WebWorker implements Runnable
 {
-
+	public String addressNew;
+	public boolean exists = false; 
 	private Socket socket;
 
 	/**
 	 * Constructor: must have a valid open socket
 	 **/
-	public WebWorker(Socket s)
-	{
+	public WebWorker(Socket s){
 		socket = s;
-	}
+	}// end of WebWorker
 
 	/**
 	 * Worker thread starting point. Each worker handles just one HTTP request and then returns, which
 	 * destroys the thread. This method assumes that whoever created the worker created it with a
 	 * valid open socket object.
 	 **/
-	public void run()
-	{
+	public void run(){
 		System.err.println("Handling connection...");
-		try
-		{
+		try{
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
 			readHTTPRequest(is);
@@ -60,41 +63,60 @@ public class WebWorker implements Runnable
 			writeContent(os);
 			os.flush();
 			socket.close();
-		}
-		catch (Exception e)
-		{
+		}// end of try
+
+		catch (Exception e){
 			System.err.println("Output error: " + e);
-		}
+		}// end of catch
 		System.err.println("Done handling connection.");
 		return;
-	}
+	}// end of run
 
 	/**
 	 * Read the HTTP request header.
 	 **/
-	private void readHTTPRequest(InputStream is)
-	{
+	private void readHTTPRequest(InputStream is){
 		String line;
 		BufferedReader r = new BufferedReader(new InputStreamReader(is));
-		while (true)
-		{
-			try
-			{
+
+		while (true){
+			try{
 				while (!r.ready())
 					Thread.sleep(1);
 				line = r.readLine();
+
+				// the following should be checking if the address given by the user 
+				// contains what it needs to contain which should be the .html file 
+				if(line.contains("GET") && line.contains(".html")){
+
+					// takes in the string length into an array
+					char[] userAddress = new char[line.length() - 14];
+					int j = 5; 
+
+					// The following goes through the given array and gets the file address from GETS
+					for(int i = 0; i < userAddress.length; i++){ 
+					   userAddress[i] = line.charAt(j);
+					   j++;
+					}// end of for
+
+					// stores given array int
+					addressNew = new String(userAddress);
+					File tempFile = new File(addressNew); 
+					exists =  tempFile.exists(); 
+					} // end if 
+
 				System.err.println("Request line: (" + line + ")");
 				if (line.length() == 0)
 					break;
-			}
+			}// end of try
 			catch (Exception e)
 			{
 				System.err.println("Request error: " + e);
 				break;
-			}
-		}
+			}// end of catch
+		}// end of while
 		return;
-	}
+	}// end of readHTTPRequest
 
 	/**
 	 * Write the HTTP header lines to the client network connection.
@@ -104,16 +126,29 @@ public class WebWorker implements Runnable
 	 * @param contentType
 	 *          is the string MIME content type (e.g. "text/html")
 	 **/
-	private void writeHTTPHeader(OutputStream os, String contentType) throws Exception
-	{
+	private void writeHTTPHeader(OutputStream os, String contentType) throws Exception{
 		Date d = new Date();
 		DateFormat df = DateFormat.getDateTimeInstance();
-		df.setTimeZone(TimeZone.getTimeZone("GMT"));
-		os.write("HTTP/1.1 200 OK\n".getBytes());
+		df.setTimeZone(TimeZone.getTimeZone("MST"));
+		
+		/*if (contentType.contains("http://localhost:8080") != true ){
+			os.write("404 not found\n".getBytes());
+			writeContentError(os);
+		}*/
+
+		// The following should only run if the address given by the user exist
+		if(exists == true){ 
+			os.write("HTTP/1.1 200 OK\n".getBytes());
+		}// end of if 
+		else { 
+			os.write("HTTP/1.1 404 Not Found\n".getBytes());
+		}// end of else 
+		
+		// os.write("HTTP/1.1 200 OK\n".getBytes());
 		os.write("Date: ".getBytes());
 		os.write((df.format(d)).getBytes());
 		os.write("\n".getBytes());
-		os.write("Server: Jon's very own server\n".getBytes());
+		os.write("Server: Kevin's very own server\n".getBytes());
 		// os.write("Last-Modified: Wed, 08 Jan 2003 23:11:55 GMT\n".getBytes());
 		// os.write("Content-Length: 438\n".getBytes());
 		os.write("Connection: close\n".getBytes());
@@ -121,7 +156,7 @@ public class WebWorker implements Runnable
 		os.write(contentType.getBytes());
 		os.write("\n\n".getBytes()); // HTTP header ends with 2 newlines
 		return;
-	}
+	}// end of writeHTTPRequest
 
 	/**
 	 * Write the data content to the client network connection. This MUST be done after the HTTP
@@ -132,9 +167,43 @@ public class WebWorker implements Runnable
 	 **/
 	private void writeContent(OutputStream os) throws Exception
 	{
+		if(exists == true){ 
+  
+			Date date = new Date(); 
+			String server = "Kevin Haro's Server";
+			BufferedReader in = new BufferedReader(new FileReader(addressNew));
+			String curr;
+			
+			// The following should go through the .html file 
+			// and put whatever that file has into the web server, it is also checking for 
+			// the little tags which should change according to what they've been set to above 
+			while((curr = in.readLine()) != null){ 
+			   if(curr.contains("{cs371date}")){
+			   curr = curr.replace("{cs371date}",date.toString());
+			   }// end of if 
+			   if(curr.contains("{cs371server}")){ 
+				  curr = curr.replace("{cs371server}",server);
+			   }// end of if
+			   os.write("<html><head></head><body>\n".getBytes());
+			   os.write(("<h3>"+ curr +"\n</h3>\n").getBytes());
+			   os.write("</body></html>\n".getBytes());
+			}// end of while
+	   
+		 }// end of main if
+
+		 else{ 
+			// the following is what actually outputs the 404 error 
+			os.write("<html><head></head><body>\n".getBytes());
+			os.write("<h3> 404 Not Found </h3>\n".getBytes());
+			os.write("</body></html>\n".getBytes());
+		 }// end of else
+	}// end of writeContent
+
+	/* private void writeContentError(OutputStream os) throws Exception
+	{
 		os.write("<html><head></head><body>\n".getBytes());
-		os.write("<h3>My web server works!</h3>\n".getBytes());
+		os.write("<h3>Error 404!</h3>\n".getBytes());
 		os.write("</body></html>\n".getBytes());
-	}
+	}*/
 
 } // end class
